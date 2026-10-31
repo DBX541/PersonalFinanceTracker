@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using FinanceApi.Data;
 using FinanceApi.Models;
 
 namespace FinanceApi.Controllers;
@@ -7,36 +9,24 @@ namespace FinanceApi.Controllers;
 [Route("api/[controller]")]
 public class AccountsController : ControllerBase
 {
-    // 模拟数据库数据
-    private static List<Account> _accounts = new()
+    private readonly AppDbContext _context;
+
+    public AccountsController(AppDbContext context)
     {
-        new Account { Id = 1, Name = "Main Wallet", Balance = 1000.50m },
-        new Account { Id = 2, Name = "Savings", Balance = 5000.00m }
-    };
+        _context = context;
+    }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Account>> GetAccounts() => Ok(_accounts);
-
-    [HttpPost]
-    public ActionResult<Account> CreateAccount(Account account)
+    public async Task<ActionResult<IEnumerable<Account>>> GetAccounts()
     {
-        account.Id = _accounts.Count + 1;
-        _accounts.Add(account);
-        return CreatedAtAction(nameof(GetAccounts), new { id = account.Id }, account);
+        return await _context.Accounts.ToListAsync();
     }
-}
 
-[ApiController]
-[Route("api/[controller]")]
-public class TransactionsController : ControllerBase
-{
     [HttpPost]
-    public IActionResult CreateTransaction(Transaction transaction)
+    public async Task<ActionResult<Account>> CreateAccount(Account account)
     {
-        if (transaction.Amount <= 0) 
-            return BadRequest("Amount must be positive.");
-        
-        // 模拟余额更新逻辑
-        return Ok(new { Message = "Transaction recorded, balance updated atomically.", Data = transaction });
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetAccounts), new { id = account.Id }, account);
     }
 }
